@@ -13,34 +13,46 @@ fn read(s: String) -> MalRet {
     reader::read_str(s.as_str())
 }
 
-fn add(args: &[MalValue]) -> MalRet {
-    let r = args.iter().try_fold(0, |acc, arg| Ok(acc + arg.as_int()?))?;
+fn arith(args: &[MalValue], f: &dyn Fn(i32, i32) -> i32) -> MalRet {
+    if args.len() < 1 {
+        return Err(MalError::new("Not enough arguments"));
+    }
+
+    let mut r = args[0].as_int()?;
+    for arg in args[1..].iter() {
+        r = f(r, arg.as_int()?)
+    }
     Ok(MalValue::Int(r))
 }
 
+fn add(args: &[MalValue]) -> MalRet {
+    arith(args, &|a, b| a + b)
+}
+
+fn sub(args: &[MalValue]) -> MalRet {
+    arith(args, &|a, b| a - b)
+}
+
 fn mul(args: &[MalValue]) -> MalRet {
-    let mut r = 1;
-    for arg in args {
-        r *= arg.as_int()?
-    }
-    Ok(MalValue::Int(r))
+    arith(args, &|a, b| a * b)
+}
+
+fn div(args: &[MalValue]) -> MalRet {
+    arith(args, &|a, b| a / b)
 }
 
 fn make_env() -> MalEnv {
     let mut m = HashMap::new();
     m.insert("+".to_string(), MalValue::Function(add));
+    m.insert("-".to_string(), MalValue::Function(sub));
     m.insert("*".to_string(), MalValue::Function(mul));
+    m.insert("/".to_string(), MalValue::Function(div));
     return m;
 }
 
 fn eval_ast(v: &MalValue, env: &MalEnv) -> MalRet {
     match v {
-        MalValue::Symbol(s) => {
-            Ok(env
-               .get(s)
-               .ok_or(MalError::new("Unknown symbol"))?
-               .clone())
-        }
+        MalValue::Symbol(s) => Ok(env.get(s).ok_or(MalError::new("Unknown symbol"))?.clone()),
 
         MalValue::List(l) => {
             let mut r = Vec::new();

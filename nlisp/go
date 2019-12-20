@@ -1,2 +1,2 @@
 #!/bin/sh
-cd ../mal && make "test^nlisp^step1"
+cd .. && make "test^nlisp^step2"
